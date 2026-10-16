@@ -505,11 +505,27 @@ $('#scanner-dialog').addEventListener('cancel', (e) => { e.preventDefault(); clo
 
 /* ---------------- backup ---------------- */
 
-$('#btn-export').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+// No app Android (Capacitor) não existe download pelo navegador:
+// grava o arquivo e abre o menu de compartilhar (Drive, WhatsApp, e-mail…).
+const native = window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform();
+
+$('#btn-export').addEventListener('click', async () => {
+  const json = JSON.stringify(state, null, 2);
+  const filename = `minhas-compras-${new Date().toISOString().slice(0, 10)}.json`;
+  if (native) {
+    try {
+      const { Filesystem, Share } = window.Capacitor.Plugins;
+      const res = await Filesystem.writeFile({ path: filename, data: json, directory: 'CACHE', encoding: 'utf8' });
+      await Share.share({ title: 'Backup Minhas Compras', files: [res.uri] });
+    } catch (err) {
+      if (!/cancel/i.test(String(err && err.message))) toast('Não foi possível exportar o backup.');
+    }
+    return;
+  }
+  const blob = new Blob([json], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `minhas-compras-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = filename;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 });
@@ -542,6 +558,6 @@ renderCart();
 renderNameList();
 showTab('compra');
 
-if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+if (!native && 'serviceWorker' in navigator && location.protocol.startsWith('http')) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
 }

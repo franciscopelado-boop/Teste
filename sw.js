@@ -2,7 +2,7 @@
 const CACHE = 'minhas-compras-v1';
 const ASSETS = [
   './', 'index.html', 'style.css', 'app.js', 'manifest.json', 'icon.svg',
-  'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
+  'vendor/html5-qrcode.min.js',
 ];
 
 self.addEventListener('install', (e) => {

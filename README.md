@@ -31,3 +31,25 @@ Para testar no computador:
 python3 -m http.server 8000
 # abra http://localhost:8000
 ```
+
+## App Android (APK)
+
+A cada push, o GitHub Actions (`.github/workflows/android-apk.yml`) empacota o app com o
+[Capacitor](https://capacitorjs.com) e publica o APK em:
+
+**https://github.com/franciscopelado-boop/Teste/releases/download/apk/minhas-compras.apk**
+
+Abra esse link no celular Android, baixe e toque no arquivo para instalar
+(o Android pede para permitir a instalação de "fontes desconhecidas" na primeira vez).
+
+O APK é assinado com a chave de depuração do servidor de build, que muda a cada build.
+Para instalar uma versão nova: exporte o backup, desinstale o app antigo, instale o novo e importe o backup.
+
+Para gerar localmente (precisa do Android SDK):
+
+```bash
+npm ci
+npm run build
+npx cap sync android
+cd android && ./gradlew assembleDebug
+```

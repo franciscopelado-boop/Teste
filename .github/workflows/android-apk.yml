@@ -1,0 +1,60 @@
+name: Gerar APK Android
+
+on:
+  push:
+    branches: [claude/shopping-tracker-app-sdl7tm, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Copiar o app web para o projeto Android
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Compilar APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug -PversionCode=${{ github.run_number }}
+          cp app/build/outputs/apk/debug/app-debug.apk ../minhas-compras.apk
+
+      - name: Guardar APK nos artefatos
+        uses: actions/upload-artifact@v4
+        with:
+          name: minhas-compras-apk
+          path: minhas-compras.apk
+
+      - name: Publicar APK para download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk --yes --cleanup-tag || true
+          gh release create apk minhas-compras.apk \
+            --target "$GITHUB_SHA" \
+            --title "Minhas Compras (APK)" \
+            --notes "Baixe o arquivo minhas-compras.apk no celular Android e toque para instalar. Gerado automaticamente a partir de ${GITHUB_SHA::7}."
