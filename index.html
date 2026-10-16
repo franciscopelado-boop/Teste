@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f766e">
+  <title>Minhas Compras</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>🛒 Minhas Compras</h1>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="compra" role="tab">Compra atual</button>
+    <button class="tab" data-tab="historico" role="tab">Histórico</button>
+    <button class="tab" data-tab="produtos" role="tab">Produtos</button>
+  </nav>
+
+  <main>
+    <!-- ================= COMPRA ATUAL ================= -->
+    <section id="tab-compra" class="panel active">
+      <form id="item-form" class="card" autocomplete="off">
+        <div class="row">
+          <label class="grow">Código de barras
+            <input id="f-barcode" inputmode="numeric" placeholder="Digite ou escaneie">
+          </label>
+          <button type="button" id="btn-scan" class="btn secondary scan-btn" title="Escanear com a câmera">📷 Escanear</button>
+        </div>
+        <label>Produto
+          <input id="f-name" list="product-names" placeholder="Ex.: Arroz 5kg" required>
+          <datalist id="product-names"></datalist>
+        </label>
+        <div class="row">
+          <label>Quantidade
+            <input id="f-qty" type="number" inputmode="decimal" min="0" step="any" value="1" required>
+          </label>
+          <label>Preço unitário (R$)
+            <input id="f-price" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0,00" required>
+          </label>
+        </div>
+        <div id="price-hint" class="hint" hidden></div>
+        <button type="submit" class="btn primary">➕ Adicionar</button>
+      </form>
+
+      <div class="card">
+        <div class="list-header">
+          <h2>Itens da compra</h2>
+          <span id="item-count" class="muted"></span>
+        </div>
+        <ul id="cart-list" class="items"></ul>
+        <p id="cart-empty" class="empty">Nenhum item ainda. Adicione acima. 👆</p>
+      </div>
+
+      <div class="total-bar">
+        <div>
+          <div class="muted small">Total</div>
+          <div id="cart-total" class="total">R$ 0,00</div>
+        </div>
+        <div class="total-actions">
+          <button id="btn-clear" class="btn ghost">Limpar</button>
+          <button id="btn-finish" class="btn primary">✅ Finalizar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HISTÓRICO ================= -->
+    <section id="tab-historico" class="panel">
+      <div id="history"></div>
+      <div class="card">
+        <h2>Backup</h2>
+        <p class="muted small">Os dados ficam salvos neste aparelho. Exporte um backup de vez em quando.</p>
+        <div class="row">
+          <button id="btn-export" class="btn secondary">⬇️ Exportar</button>
+          <label class="btn secondary file-btn">⬆️ Importar
+            <input id="file-import" type="file" accept="application/json" hidden>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PRODUTOS ================= -->
+    <section id="tab-produtos" class="panel">
+      <div class="card">
+        <input id="product-search" type="search" placeholder="Buscar produto ou código…">
+      </div>
+      <div id="products"></div>
+    </section>
+  </main>
+
+  <!-- Scanner -->
+  <dialog id="scanner-dialog" class="dialog">
+    <h2>Aponte para o código de barras</h2>
+    <div id="scanner"></div>
+    <p id="scanner-msg" class="muted small"></p>
+    <button id="btn-scan-close" class="btn ghost">Cancelar</button>
+  </dialog>
+
+  <!-- Resultado / detalhes -->
+  <dialog id="result-dialog" class="dialog">
+    <div id="result-body"></div>
+    <button id="btn-result-close" class="btn primary">OK</button>
+  </dialog>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
