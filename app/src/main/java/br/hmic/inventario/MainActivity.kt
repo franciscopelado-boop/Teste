@@ -11,7 +11,14 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.CancellationSignal
 import android.os.Environment
+import android.os.ParcelFileDescriptor
+import android.print.PageRange
+import android.print.PrintAttributes
+import android.print.PrintDocumentAdapter
+import android.print.PrintDocumentInfo
+import android.print.PrintManager
 import android.provider.MediaStore
 import android.text.InputType
 import android.util.Base64
@@ -34,6 +41,8 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
 /**
  * App "Inventário CC - HMIC"
@@ -64,6 +73,8 @@ class MainActivity : Activity() {
             settings.useWideViewPort = true
             settings.cacheMode = WebSettings.LOAD_DEFAULT
             settings.mediaPlaybackRequiresUserGesture = true
+            // marcador para a página saber que está dentro do app
+            settings.userAgentString = settings.userAgentString + " InventarioHMICApp/1.1"
             addJavascriptInterface(Ponte(), "AndroidApp")
             webViewClient = Cliente()
             webChromeClient = object : WebChromeClient() {
@@ -227,12 +238,53 @@ class MainActivity : Activity() {
                     val bytes = Base64.decode(base64, Base64.DEFAULT)
                     val nomeSeguro = nome.replace(Regex("[\\\\/:*?\"<>|]"), "_")
                     val uri = gravar(bytes, nomeSeguro)
-                    perguntarAcao(uri, nomeSeguro)
+                    perguntarAcao(uri, nomeSeguro, bytes)
                 } catch (e: Exception) {
                     toast("Erro ao salvar o PDF: ${e.message}")
                 }
             }
         }
+
+        @JavascriptInterface
+        fun imprimirPdf(base64: String, nome: String) {
+            runOnUiThread {
+                try {
+                    imprimir(Base64.decode(base64, Base64.DEFAULT), nome.replace(Regex("[\\\\/:*?\"<>|]"), "_"))
+                } catch (e: Exception) {
+                    toast("Erro ao imprimir: ${e.message}")
+                }
+            }
+        }
+    }
+
+    /** Abre a tela de impressão do Android (também permite "Salvar como PDF"). */
+    private fun imprimir(bytes: ByteArray, nome: String) {
+        val arq = File(cacheDir, nome).apply { writeBytes(bytes) }
+        val pm = getSystemService(Context.PRINT_SERVICE) as PrintManager
+        pm.print(nome.removeSuffix(".pdf"), object : PrintDocumentAdapter() {
+            override fun onLayout(
+                antigo: PrintAttributes?, novo: PrintAttributes, cancel: CancellationSignal?,
+                cb: LayoutResultCallback, extras: Bundle?
+            ) {
+                if (cancel?.isCanceled == true) { cb.onLayoutCancelled(); return }
+                cb.onLayoutFinished(
+                    PrintDocumentInfo.Builder(nome)
+                        .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).build(), true
+                )
+            }
+
+            override fun onWrite(
+                paginas: Array<out PageRange>, destino: ParcelFileDescriptor,
+                cancel: CancellationSignal?, cb: WriteResultCallback
+            ) {
+                try {
+                    FileInputStream(arq).use { i -> FileOutputStream(destino.fileDescriptor).use { o -> i.copyTo(o) } }
+                    cb.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
+                } catch (e: Exception) {
+                    cb.onWriteFailed(e.message)
+                }
+            }
+        }, null)
     }
 
     private fun gravar(bytes: ByteArray, nome: String): Uri {
@@ -254,7 +306,7 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun perguntarAcao(uri: Uri, nome: String) {
+    private fun perguntarAcao(uri: Uri, nome: String, bytes: ByteArray) {
         val onde = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) "Downloads/Inventario HMIC" else "pasta do app"
         AlertDialog.Builder(this)
             .setTitle("PDF salvo")
@@ -271,7 +323,7 @@ class MainActivity : Activity() {
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 startActivity(Intent.createChooser(i, "Enviar PDF"))
             }
-            .setNegativeButton("Fechar", null)
+            .setNegativeButton("Imprimir") { _, _ -> imprimir(bytes, nome) }
             .show()
     }
 }
