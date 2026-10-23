@@ -1,0 +1,47 @@
+name: Gerar APK Inventario HMIC
+
+on:
+  push:
+    branches: [inventario-hmic]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: inventario-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Compilar APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon -Pandroid.injected.version.code=${{ github.run_number }}
+          cp app/build/outputs/apk/release/app-release.apk inventario-cc-hmic.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: inventario-cc-hmic-apk
+          path: inventario-cc-hmic.apk
+
+      - name: Publicar APK para download
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete inventario-apk --yes --cleanup-tag || true
+          gh release create inventario-apk inventario-cc-hmic.apk \
+            --target "$GITHUB_SHA" \
+            --title "Inventario CC HMIC (APK)" \
+            --notes "Baixe inventario-cc-hmic.apk no celular Android e toque para instalar."
